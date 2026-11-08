@@ -4,12 +4,9 @@ from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
 
 def get_traffic_sign_datasets(data_dir='./data', img_size=(32, 32), batch_size=64):
-    """
-    Descarcă, preprocesează și împarte setul de date pentru semne de circulație.
-    """
+    
     
     # 1. Definirea transformărilor (Pre-procesare)
-    # Imaginile cu semne de circulație originale au dimensiuni diferite, deci trebuie REDIMENSIONATE uniform.
     train_transform = transforms.Compose([
         transforms.Resize(img_size),
         # Augmentare de date: utilă pentru semne de circulație (simulează rotații sau variații de lumină)
@@ -21,7 +18,6 @@ def get_traffic_sign_datasets(data_dir='./data', img_size=(32, 32), batch_size=6
                              std=[0.1624, 0.1611, 0.1691])
     ])
     
-    # Pentru validare și testare NU augmentăm datele, doar le aducem la aceeași formă
     eval_transform = transforms.Compose([
         transforms.Resize(img_size),
         transforms.ToTensor(),
@@ -29,7 +25,6 @@ def get_traffic_sign_datasets(data_dir='./data', img_size=(32, 32), batch_size=6
                              std=[0.1624, 0.1611, 0.1691])
     ])
     
-    # 2. Încărcarea setului de date brut folosind GTSRB din torchvision
     # split='train' conține în jur de 39,209 imagini în formatul nativ GTSRB
     full_train_dataset = datasets.GTSRB(
         root=data_dir, 
@@ -45,13 +40,11 @@ def get_traffic_sign_datasets(data_dir='./data', img_size=(32, 32), batch_size=6
         transform=eval_transform
     )
     
-    # 3. Împărțirea setului Train în Train și Validation (Proporții: 85% Train, 15% Val)
     # Împărțirea se face pe baza lungimii setului
     total_train_len = len(full_train_dataset)
     val_len = int(0.15 * total_train_len)
     train_len = total_train_len - val_len
     
-    # Fixăm un generator pentru ca împărțirea să fie reproductibilă la fiecare rulare
     generator = torch.Generator().manual_seed(42)
     train_subset, val_subset = random_split(
         full_train_dataset, 
@@ -59,12 +52,9 @@ def get_traffic_sign_datasets(data_dir='./data', img_size=(32, 32), batch_size=6
         generator=generator
     )
     
-    # Aplicăm transformările specifice fiecărui subset (Pășește peste limitarea ramon_split)
     train_subset.dataset.transform = train_transform
     val_subset.dataset.transform = eval_transform
     
-    # 4. Crearea DataLoader-elor pentru gestionarea batch-urilor și paralelizare
-    # Folosim num_workers pentru a încărca imaginile în paralel pe fire de execuție secundare
     num_workers = min(4, os.cpu_count() or 0)
     
     train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
@@ -73,13 +63,10 @@ def get_traffic_sign_datasets(data_dir='./data', img_size=(32, 32), batch_size=6
     
     return train_loader, val_loader, test_loader
 
-# ==========================================
-# SCRIPT DE VERIFICARE A FUNCTIONALITATII
-# ==========================================
+
 if __name__ == '__main__':
     print("Incepem configurarea si verificarea datelor...")
     
-    # Apelăm funcția configurată
     train_dl, val_dl, test_dl = get_traffic_sign_datasets(batch_size=64)
     
     print("\n[SUCCES] Setul de date a fost descarcat si impartit!")
@@ -87,7 +74,6 @@ if __name__ == '__main__':
     print(f"Număr de batch-uri în Validation: {len(val_dl)} (Total imagini: ~{len(val_dl.dataset)})")
     print(f"Număr de batch-uri în Test: {len(test_dl)} (Total imagini: ~{len(test_dl.dataset)})")
     
-    # Verificăm funcționalitatea iterând prin primul batch din Train Loader
     images, labels = next(iter(train_dl))
     
     print("\n[VERIFICARE BATCH]")
